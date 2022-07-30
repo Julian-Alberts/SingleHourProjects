@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="icon" type="image/x-icon" href="">
+    <title>Document</title>
+    <style>
+        .key {
+            border-radius: 5px;
+            border: #000000 solid;
+            width: 50px;
+            height: 50px;
+            text-align: center;
+            line-height: 50px;
+            font-size: 30px;
+        }
+    </style>
+</head>
+<body>
+    Controls
+    <table>
+        <tr>
+            <td>Move</td>
+            <td>Player 1</td>
+            <td>Player 2</td>
+        </tr>
+        <tr>
+            <td>Up</td>
+            <td><div class="key">W</div></td>
+            <td><div class="key">O</div></td>
+        </tr>
+
+        <tr>
+            <td>Down</td>
+            <td><div class="key">S</div></td>
+            <td><div class="key">L</div></td>
+        </tr>
+    </table> 
+    <script>
+        const CANVAS_SIZE = 16;
+        const CANVAS = document.createElement("canvas");
+        CANVAS.width = CANVAS_SIZE;
+        CANVAS.height = CANVAS_SIZE;
+        const CANVAS_CONTEXT = CANVAS.getContext("2d");
+        const INTERVAL_MS = 1000 / 5;
+        const PADDLE_HEIGHT = 5;
+        const PADDLE_WIDTH = 1;
+        let lastFrame = new Date().getTime();
+        
+        class Player {
+            constructor(x, y) {
+                this.paddle_x = x;
+                this.paddle_y = y;
+                this.vel = 0;
+            }
+            update(dt) {
+                this.paddle_y += this.vel * (dt/1000);
+                if (this.paddle_y < 0) {
+                    this.paddle_y = 0;
+                } else if (this.paddle_y + PADDLE_HEIGHT > CANVAS_SIZE) {
+                    this.paddle_y = CANVAS_SIZE - PADDLE_HEIGHT;
+                }
+            }
+        }
+
+        class Ball {
+            constructor(x,y) {
+                this.x = x;
+                this.y = y;
+                this.vel = {
+                    x: 3,
+                    y: 0
+                };
+            }
+            /**
+             * @param {number} dt
+             * @param {Player[]} players
+             */
+            update(dt, players) {
+                this.x += this.vel.x * (dt / 1000);
+                this.y += this.vel.y * (dt / 1000);
+                
+                if (this.x < 0 || this.x > CANVAS_SIZE) {
+                    this.x = CANVAS_SIZE / 2;
+                    this.y = CANVAS_SIZE / 2;
+                }
+                
+                if (this.y < 0 || this.y > CANVAS_SIZE) {
+                    this.vel.y *= -1;
+                }
+
+                players.forEach(player => {
+                    if (
+                        this.x < player.paddle_x && this.x + 1 > player.paddle_x &&
+                        this.y + 1 >= player.paddle_y && this.y <= player.paddle_y + PADDLE_HEIGHT
+                    ) {
+                        this.vel.x *= -1;
+                        let paddleCenter = player.paddle_y + PADDLE_HEIGHT / 2;
+                        let distToPaddleCenter = paddleCenter - this.y;
+                        this.vel.y += distToPaddleCenter * -.1;
+                    }
+                })
+            }
+            /**
+             * @param {CanvasRenderingContext2D}
+             */
+            draw(canvas_context) {
+                canvas_context.fillStyle = "white";
+                canvas_context.fillRect(this.x, this.y, 2, 2);
+            }
+        }
+
+        const PLAYERS = [
+            new Player(1, (CANVAS_SIZE - PADDLE_HEIGHT) / 2),
+            new Player(CANVAS_SIZE - 2, (CANVAS_SIZE - PADDLE_HEIGHT) / 2),
+        ];
+        const BALL = new Ball(CANVAS_SIZE / 2, CANVAS_SIZE / 2);
+
+        let favicon = document.querySelector('link[rel="icon"]');
+
+        document.addEventListener("keydown", event => {
+            console.log(event.key);
+            switch (event.key) {
+                case "w": 
+                    PLAYERS[0].vel = -4;
+                    break;
+                case "s": 
+                    PLAYERS[0].vel = 4;
+                    break;
+                case "o": 
+                    PLAYERS[1].vel = -4;
+                    break;
+                case "l": 
+                    PLAYERS[1].vel = 4;
+                    break;
+            }
+        })
+        
+
+        document.addEventListener("keyup", event => {
+            switch (event.key) {
+                case "w": 
+                    PLAYERS[0].vel = 0;
+                    break;
+                case "s": 
+                    PLAYERS[0].vel = 0;
+                    break;
+                case "o": 
+                    PLAYERS[1].vel = 0;
+                    break;
+                case "l": 
+                    PLAYERS[1].vel = 0;
+                    break;
+            }
+        })
+
+        /**
+         * @param {Player} player
+         */
+        function draw_player(player) {
+            const X = player.paddle_x;
+            const Y = player.paddle_y;
+            CANVAS_CONTEXT.fillStyle = "white";
+            CANVAS_CONTEXT.fillRect(X, Y, PADDLE_WIDTH, PADDLE_HEIGHT);
+        }
+
+        function draw() {
+            let currentTime = new Date().getTime();
+            let dt = currentTime - lastFrame;
+            BALL.update(dt, PLAYERS);
+            PLAYERS.forEach(player => player.update(dt));
+
+            CANVAS_CONTEXT.fillStyle = "black";
+            CANVAS_CONTEXT.clearRect(0, 0, CANVAS_SIZE, CANVAS_SIZE);
+            CANVAS_CONTEXT.fillRect(0,0,CANVAS_SIZE, CANVAS_SIZE);
+            PLAYERS.forEach(draw_player);
+            
+            BALL.draw(CANVAS_CONTEXT);
+            favicon.setAttribute("href", CANVAS.toDataURL());
+            lastFrame = currentTime;
+        }
+        
+        setInterval(draw, INTERVAL_MS);
+
+    </script>
+</body>
+</html>
